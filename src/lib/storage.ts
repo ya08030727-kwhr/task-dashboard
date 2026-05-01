@@ -41,26 +41,33 @@ export function getNextId(): number {
 }
 
 // Gcal cache with date validation
+const GCAL_CACHE_VERSION = "v4"; // バージョンを上げると古いキャッシュを強制クリア
+
 function todayStr() {
   // ローカル日付（UTC変換なし）で判定 → 0:00 JST に日付が変わる
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
+function isCacheValid() {
+  return getItem<string>("gcal_version", "") === GCAL_CACHE_VERSION
+    && getItem<string>("gcal_date", "") === todayStr();
+}
 export function loadGcalToday(): Schedule[] {
-  if (getItem<string>("gcal_date", "") !== todayStr()) return [];
+  if (!isCacheValid()) return [];
   return getItem<Schedule[]>("gcal_today", []);
 }
 export function saveGcalToday(v: Schedule[]) {
   setItem("gcal_today", v);
   setItem("gcal_date", todayStr());
+  setItem("gcal_version", GCAL_CACHE_VERSION);
 }
 export function loadGcalTomorrow(): Schedule[] {
-  if (getItem<string>("gcal_date", "") !== todayStr()) return [];
+  if (!isCacheValid()) return [];
   return getItem<Schedule[]>("gcal_tmr", []);
 }
 export function saveGcalTomorrow(v: Schedule[]) {
   setItem("gcal_tmr", v);
 }
 export function isGcalCacheStale(): boolean {
-  return getItem<string>("gcal_date", "") !== todayStr();
+  return !isCacheValid();
 }
