@@ -116,10 +116,20 @@ function Dashboard() {
     if (!tok) { googleLogin(); return; }
     setIsGcalLoading(true);
     try {
-      const res = await fetch("/api/gcal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: tok, tzOffset: new Date().getTimezoneOffset(), localDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })() }) });
+      const res = await fetch("/api/gcal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: tok }) });
       if (!res.ok) { if (res.status === 401) { setAccessToken(null); setGcalConnected(false); googleLogin(); } throw new Error(await res.text()); }
       const data = await res.json();
-      const te = parseGcalEvents(data.today || []), tre = parseGcalEvents(data.tomorrow || []);
+      // 今日/明日の分類をクライアント側（ローカル時刻）で行う
+      const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const todayStr = localDateStr(new Date());
+      const tmrDate = new Date(); tmrDate.setDate(tmrDate.getDate()+1);
+      const tmrStr = localDateStr(tmrDate);
+      const splitEvents = (events: {start?: {dateTime?: string; date?: string}}[]) =>
+        events.filter(e => { const s = e.start?.dateTime || e.start?.date; return s && localDateStr(new Date(s)) === todayStr; });
+      const splitTmr = (events: {start?: {dateTime?: string; date?: string}}[]) =>
+        events.filter(e => { const s = e.start?.dateTime || e.start?.date; return s && localDateStr(new Date(s)) === tmrStr; });
+      const te = parseGcalEvents(splitEvents(data.events || []));
+      const tre = parseGcalEvents(splitTmr(data.events || []));
       saveGcalToday(te); saveGcalTomorrow(tre);
       const manual = loadSchedules();
       setTodaySched([...manual.today, ...te]);
