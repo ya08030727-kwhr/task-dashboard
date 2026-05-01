@@ -116,7 +116,7 @@ function Dashboard() {
     if (!tok) { googleLogin(); return; }
     setIsGcalLoading(true);
     try {
-      const res = await fetch("/api/gcal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: tok }) });
+      const res = await fetch("/api/gcal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: tok, tzOffset: new Date().getTimezoneOffset() }) });
       if (!res.ok) { if (res.status === 401) { setAccessToken(null); setGcalConnected(false); googleLogin(); } throw new Error(await res.text()); }
       const data = await res.json();
       const te = parseGcalEvents(data.today || []), tre = parseGcalEvents(data.tomorrow || []);

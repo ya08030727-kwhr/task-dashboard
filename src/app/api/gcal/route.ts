@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken } = await request.json();
+    const { accessToken, tzOffset = 0 } = await request.json();
     if (!accessToken) return NextResponse.json({ error: "No token" }, { status: 401 });
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dayAfterTomorrow = new Date(today); dayAfterTomorrow.setDate(dayAfterTomorrow.getDate()+2);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+    // ユーザーのローカル日付で今日/明日の境界を計算（タイムゾーン対応）
+    // tzOffset = getTimezoneOffset() の値（JST = -540）
+    function localMidnight(daysFromNow: number): Date {
+      const localNow = new Date(Date.now() - tzOffset * 60 * 1000);
+      const y = localNow.getUTCFullYear();
+      const m = localNow.getUTCMonth();
+      const d = localNow.getUTCDate() + daysFromNow;
+      return new Date(Date.UTC(y, m, d) + tzOffset * 60 * 1000);
+    }
+    const today = localMidnight(0);
+    const tomorrow = localMidnight(1);
+    const dayAfterTomorrow = localMidnight(2);
 
     const calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!calRes.ok) return NextResponse.json({ error: "callist failed" }, { status: calRes.status });
