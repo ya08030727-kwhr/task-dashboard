@@ -29,7 +29,8 @@ export default function NightView({ tasks, onTasksChange, onReflectionChange, on
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   const counted = tasks.filter(t => !(t.done && t.dueDate && t.dueDate < todayStr));
   const done = counted.filter(t => t.done).length;
   const total = counted.length;

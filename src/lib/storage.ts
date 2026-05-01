@@ -42,7 +42,9 @@ export function getNextId(): number {
 
 // Gcal cache with date validation
 function todayStr() {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // ローカル日付（UTC変換なし）で判定 → 0:00 JST に日付が変わる
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 export function loadGcalToday(): Schedule[] {
   if (getItem<string>("gcal_date", "") !== todayStr()) return [];

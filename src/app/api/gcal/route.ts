@@ -2,21 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken, tzOffset = 0 } = await request.json();
+    const { accessToken, localDate, tzOffset = 0 } = await request.json();
     if (!accessToken) return NextResponse.json({ error: "No token" }, { status: 401 });
 
-    // ユーザーのローカル日付で今日/明日の境界を計算（タイムゾーン対応）
-    // tzOffset = getTimezoneOffset() の値（JST = -540）
-    function localMidnight(daysFromNow: number): Date {
-      const localNow = new Date(Date.now() - tzOffset * 60 * 1000);
-      const y = localNow.getUTCFullYear();
-      const m = localNow.getUTCMonth();
-      const d = localNow.getUTCDate() + daysFromNow;
-      return new Date(Date.UTC(y, m, d) + tzOffset * 60 * 1000);
+    // クライアントのローカル日付 "YYYY-MM-DD" を基準に境界を計算
+    // localDate がない場合は tzOffset で推定（フォールバック）
+    function localMidnight(baseDate: string, daysFromNow: number): Date {
+      const [y, m, d] = baseDate.split("-").map(Number);
+      // ローカル 00:00 をUTCに変換: UTC = local + tzOffset(分)
+      return new Date(Date.UTC(y, m - 1, d + daysFromNow) + tzOffset * 60 * 1000);
     }
-    const today = localMidnight(0);
-    const tomorrow = localMidnight(1);
-    const dayAfterTomorrow = localMidnight(2);
+    const base = localDate || (() => {
+      const n = new Date(Date.now() - tzOffset * 60 * 1000);
+      return `${n.getUTCFullYear()}-${String(n.getUTCMonth()+1).padStart(2,"0")}-${String(n.getUTCDate()).padStart(2,"0")}`;
+    })();
+    const today = localMidnight(base, 0);
+    const tomorrow = localMidnight(base, 1);
+    const dayAfterTomorrow = localMidnight(base, 2);
 
     const calRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!calRes.ok) return NextResponse.json({ error: "callist failed" }, { status: calRes.status });
